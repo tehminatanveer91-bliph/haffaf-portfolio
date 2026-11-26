@@ -1,0 +1,328 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default-deny all unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        (
+          request.auth.uid == 'bWbIgXzS2zSBG57l9b0BgOi9DRD3' &&
+          request.auth.token.email == 'tehminatanveer91@gmail.com'
+        ) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidEmail(val) {
+      return val is string &&
+        val.size() >= 5 &&
+        val.size() <= 150 &&
+        val.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+
+    function isValidExternalUrl(val, maxLen) {
+      return val is string && val.size() <= maxLen && (
+        val == '' ||
+        val.matches('^https?://.*')
+      );
+    }
+
+    function isValidThumbnailUrl(val, maxLen) {
+      return val is string && val.size() <= maxLen && (
+        val == '' ||
+        val.matches('^https?://.*') ||
+        val.matches('^/src/assets/images/.*')
+      );
+    }
+
+    // --- Validation Blueprints ---
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+        data.keys().hasOnly(['email', 'createdAt']) &&
+        isValidEmail(data.email) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == userId && data.uid.size() <= 128 &&
+        isValidEmail(data.email) &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+        data.role in ['admin', 'viewer'] &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll([
+          'title', 'description', 'category', 'technologies',
+          'thumbnailUrl', 'liveUrl', 'githubUrl', 'published',
+          'featured', 'order', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'title', 'description', 'category', 'technologies',
+          'thumbnailUrl', 'liveUrl', 'githubUrl', 'published',
+          'featured', 'order', 'createdAt', 'updatedAt'
+        ]) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+        data.description is string && data.description.size() >= 10 && data.description.size() <= 1500 &&
+        data.category is string && data.category in ['Full-Stack', 'Frontend', 'Cloud & APIs', 'UI Architecture'] &&
+        data.technologies is list && data.technologies.size() >= 1 && data.technologies.size() <= 12 &&
+        data.technologies[0] is string && data.technologies[0].size() >= 1 && data.technologies[0].size() <= 40 &&
+        isValidThumbnailUrl(data.thumbnailUrl, 1000) &&
+        isValidExternalUrl(data.liveUrl, 500) &&
+        isValidExternalUrl(data.githubUrl, 500) &&
+        data.published is bool &&
+        data.featured is bool &&
+        data.order is number && data.order >= 0 && data.order <= 10000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSkill(data) {
+      return data.keys().hasAll(['name', 'category', 'proficiency', 'order', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['name', 'category', 'proficiency', 'order', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 60 &&
+        data.category is string && data.category in [
+          'Frontend Development',
+          'Backend Development',
+          'Database & Cloud',
+          'Development Tools'
+        ] &&
+        data.proficiency is number && data.proficiency >= 1 && data.proficiency <= 100 &&
+        data.order is number && data.order >= 0 && data.order <= 10000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidService(data) {
+      return data.keys().hasAll(['title', 'description', 'deliverables', 'order', 'active', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['title', 'description', 'deliverables', 'order', 'active', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+        data.description is string && data.description.size() >= 10 && data.description.size() <= 600 &&
+        data.deliverables is list && data.deliverables.size() >= 1 && data.deliverables.size() <= 8 &&
+        data.deliverables[0] is string && data.deliverables[0].size() >= 1 && data.deliverables[0].size() <= 80 &&
+        data.order is number && data.order >= 0 && data.order <= 10000 &&
+        data.active is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['name', 'email', 'subject', 'message', 'read', 'createdAt']) &&
+        data.keys().hasOnly(['name', 'email', 'subject', 'message', 'read', 'createdAt']) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+        isValidEmail(data.email) &&
+        data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 160 &&
+        data.message is string && data.message.size() >= 10 && data.message.size() <= 3000 &&
+        data.read is bool &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSiteSettings(data) {
+      return data.keys().hasAll([
+          'brandName', 'heroHeading', 'heroIntro', 'availabilityText', 'availableForWork',
+          'aboutTitle', 'aboutLead', 'aboutBody', 'yearsExperience', 'projectsDelivered',
+          'location', 'contactEmail', 'githubUrl', 'linkedinUrl', 'twitterUrl', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'brandName', 'heroHeading', 'heroIntro', 'availabilityText', 'availableForWork',
+          'aboutTitle', 'aboutLead', 'aboutBody', 'yearsExperience', 'projectsDelivered',
+          'location', 'contactEmail', 'githubUrl', 'linkedinUrl', 'twitterUrl', 'updatedAt'
+        ]) &&
+        data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 50 &&
+        data.heroHeading is string && data.heroHeading.size() >= 5 && data.heroHeading.size() <= 160 &&
+        data.heroIntro is string && data.heroIntro.size() >= 10 && data.heroIntro.size() <= 500 &&
+        data.availabilityText is string && data.availabilityText.size() >= 2 && data.availabilityText.size() <= 80 &&
+        data.availableForWork is bool &&
+        data.aboutTitle is string && data.aboutTitle.size() >= 3 && data.aboutTitle.size() <= 120 &&
+        data.aboutLead is string && data.aboutLead.size() >= 10 && data.aboutLead.size() <= 400 &&
+        data.aboutBody is string && data.aboutBody.size() >= 20 && data.aboutBody.size() <= 2500 &&
+        data.yearsExperience is string && data.yearsExperience.size() >= 1 && data.yearsExperience.size() <= 20 &&
+        data.projectsDelivered is string && data.projectsDelivered.size() >= 1 && data.projectsDelivered.size() <= 20 &&
+        data.location is string && data.location.size() >= 2 && data.location.size() <= 80 &&
+        isValidEmail(data.contactEmail) &&
+        isValidExternalUrl(data.githubUrl, 300) &&
+        isValidExternalUrl(data.linkedinUrl, 300) &&
+        isValidExternalUrl(data.twitterUrl, 300) &&
+        data.updatedAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // Authorized Admin Registry (No public read/write; only owner can check own doc, admins manage)
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) &&
+        isVerified() &&
+        isValidAdminUser(incoming()) &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+      allow update: if false;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // User Profiles (Strict PII Isolation & Admin-only Management)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) &&
+        isVerified() &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(userId) &&
+        isVerified() &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'role', 'updatedAt']) &&
+        isAdmin();
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Portfolio Projects (Public read only when published == true; Admin CRUD)
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (existing().published == true || isAdmin());
+      allow list: if resource.data.published == true || isAdmin();
+      allow create: if isValidId(projectId) &&
+        isVerified() &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(projectId) &&
+        isVerified() &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'description', 'category', 'technologies',
+          'thumbnailUrl', 'liveUrl', 'githubUrl', 'published',
+          'featured', 'order', 'updatedAt'
+        ]) &&
+        isAdmin();
+      allow delete: if isValidId(projectId) && isAdmin();
+    }
+
+    // Technical Skills (Public read; Admin CRUD)
+    match /skills/{skillId} {
+      allow get: if isValidId(skillId);
+      allow list: if true;
+      allow create: if isValidId(skillId) &&
+        isVerified() &&
+        isValidSkill(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(skillId) &&
+        isVerified() &&
+        isValidSkill(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'category', 'proficiency', 'order', 'updatedAt'
+        ]) &&
+        isAdmin();
+      allow delete: if isValidId(skillId) && isAdmin();
+    }
+
+    // Engineering Services (Public read only when active == true; Admin CRUD)
+    match /services/{serviceId} {
+      allow get: if isValidId(serviceId) && (existing().active == true || isAdmin());
+      allow list: if resource.data.active == true || isAdmin();
+      allow create: if isValidId(serviceId) &&
+        isVerified() &&
+        isValidService(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(serviceId) &&
+        isVerified() &&
+        isValidService(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'description', 'deliverables', 'order', 'active', 'updatedAt'
+        ]) &&
+        isAdmin();
+      allow delete: if isValidId(serviceId) && isAdmin();
+    }
+
+    // Visitor Contact Messages (Validated public create-only; Admin-only read/manage)
+    match /messages/{messageId} {
+      allow get: if isValidId(messageId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(messageId) &&
+        isValidMessage(incoming()) &&
+        incoming().read == false &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(messageId) &&
+        isVerified() &&
+        isValidMessage(incoming()) &&
+        incoming().name == existing().name &&
+        incoming().email == existing().email &&
+        incoming().subject == existing().subject &&
+        incoming().message == existing().message &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['read']) &&
+        isAdmin();
+      allow delete: if isValidId(messageId) && isAdmin();
+    }
+
+    // Dynamic Site Settings (Public read for 'main' document only; Admin create/update)
+    match /siteSettings/{docId} {
+      allow get: if isValidId(docId) && (docId == 'main' || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(docId) &&
+        isVerified() &&
+        isValidSiteSettings(incoming()) &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(docId) &&
+        isVerified() &&
+        isValidSiteSettings(incoming()) &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'brandName', 'heroHeading', 'heroIntro', 'availabilityText', 'availableForWork',
+          'aboutTitle', 'aboutLead', 'aboutBody', 'yearsExperience', 'projectsDelivered',
+          'location', 'contactEmail', 'githubUrl', 'linkedinUrl', 'twitterUrl', 'updatedAt'
+        ]) &&
+        isAdmin();
+      allow delete: if false;
+    }
+  }
+}

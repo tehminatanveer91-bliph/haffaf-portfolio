@@ -1,0 +1,367 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator registry entry.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 150
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile with strict PII isolation.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 150
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "viewer"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt", "updatedAt"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Portfolio project case study.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 1500
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Full-Stack", "Frontend", "Cloud & APIs", "UI Architecture"],
+          "maxLength": 40
+        },
+        "technologies": {
+          "type": "array",
+          "description": "Bounded list of up to 12 technologies."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "liveUrl": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "githubUrl": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "published": {
+          "type": "boolean"
+        },
+        "featured": {
+          "type": "boolean"
+        },
+        "order": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "category",
+        "technologies",
+        "thumbnailUrl",
+        "liveUrl",
+        "githubUrl",
+        "published",
+        "featured",
+        "order",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Skill": {
+      "title": "Skill",
+      "description": "Technical skill with category and proficiency level.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Frontend Development",
+            "Backend Development",
+            "Database & Cloud",
+            "Development Tools"
+          ],
+          "maxLength": 50
+        },
+        "proficiency": {
+          "type": "number"
+        },
+        "order": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "category", "proficiency", "order", "createdAt", "updatedAt"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Professional engineering service offering.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 600
+        },
+        "deliverables": {
+          "type": "array",
+          "description": "Bounded list of up to 8 deliverables."
+        },
+        "order": {
+          "type": "number"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["title", "description", "deliverables", "order", "active", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Visitor contact form inquiry.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 150,
+          "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "message": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 3000
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "email", "subject", "message", "read", "createdAt"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Dynamic portfolio copy, availability, and social links.",
+      "type": "object",
+      "properties": {
+        "brandName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "heroHeading": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "heroIntro": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 500
+        },
+        "availabilityText": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "availableForWork": {
+          "type": "boolean"
+        },
+        "aboutTitle": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 120
+        },
+        "aboutLead": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 400
+        },
+        "aboutBody": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 2500
+        },
+        "yearsExperience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "projectsDelivered": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20
+        },
+        "location": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "contactEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 150
+        },
+        "githubUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "linkedinUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "twitterUrl": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "brandName",
+        "heroHeading",
+        "heroIntro",
+        "availabilityText",
+        "availableForWork",
+        "aboutTitle",
+        "aboutLead",
+        "aboutBody",
+        "yearsExperience",
+        "projectsDelivered",
+        "location",
+        "contactEmail",
+        "githubUrl",
+        "linkedinUrl",
+        "twitterUrl",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin UIDs."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Admin/user profile documents with strict PII isolation."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/Project" },
+      "description": "Portfolio projects; published projects are publicly readable."
+    },
+    "/skills/{skillId}": {
+      "schema": { "$ref": "#/entities/Skill" },
+      "description": "Technical skills grouped by category."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/Service" },
+      "description": "Engineering services offered."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Contact form submissions; write-once public create, admin-only read/update/delete."
+    },
+    "/siteSettings/{docId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Site-wide dynamic content configuration."
+    }
+  }
+}

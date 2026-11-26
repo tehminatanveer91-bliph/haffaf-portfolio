@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (
+          request.auth.uid == 'bWbIgXzS2zSBG57l9b0BgOi9DRD3' &&
+          request.auth.token.email == 'tehminatanveer91@gmail.com'
+        ) ||
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Public read for published portfolio assets; admin-only image uploads up to 5MB
+    match /projects/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() &&
+        request.resource != null &&
+        request.resource.size <= 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/(jpeg|png|webp|avif)');
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
